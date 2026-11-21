@@ -1,0 +1,4 @@
+plugins { id 'com.android.application' version '8.7.3' }
+android { namespace 'br.oab.minha'; compileSdk 35
+ defaultConfig { applicationId 'br.oab.minha'; minSdk 26; targetSdk 34; versionCode 9; versionName '9.0-beta' }
+}

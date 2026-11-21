@@ -1,0 +1,8 @@
+export default {async fetch(req,env){
+ const send=(status,data)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json"}});
+ if(req.method!=="POST"||new URL(req.url).pathname!=="/api/tutor")return send(404,{error:"Rota inválida"});
+ if(!env.TUTOR_TOKEN||req.headers.get("Authorization")!=="Bearer "+env.TUTOR_TOKEN)return send(401,{error:"Token inválido"});
+ if(!env.GEMINI_API_KEY)return send(503,{error:"API não configurada"});
+ try{const raw=await req.text();if(raw.length>50000)return send(413,{error:"Texto muito longo"});const d=JSON.parse(raw);if(typeof d.question!=="string"||!d.question.trim())return send(400,{error:"Informe uma pergunta"});
+ const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:"Professor de Direito para OAB. Responda em português brasileiro, fundamente sem inventar artigos ou jurisprudência, indique incertezas."}]},contents:[{parts:[{text:d.question}]}],generationConfig:{maxOutputTokens:2048}}),signal:AbortSignal.timeout(45000)});if(!r.ok)return send(r.status===429?429:502,{error:"Gemini HTTP "+r.status});const j=await r.json();const answer=j.candidates?.[0]?.content?.parts?.filter(p=>!p.thought).map(p=>p.text||"").join("\n");return answer?send(200,{answer}):send(502,{error:"Resposta vazia"});}catch{return send(502,{error:"Falha de comunicação"})}
+}};
